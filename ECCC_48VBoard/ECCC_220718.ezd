@@ -1,0 +1,23 @@
+[Basic Page]
+m_strPrjFileName = D:\Code\ECCC_48VBoard\ECCC_48VBoard\ECCC_220718.ezd
+m_straOutFileName[0] = D:\Code\ECCC_48VBoard\ECCC_48VBoard\Debug\ECCC_48VBoard.out
+m_straOutFileName[1] = 
+m_straOutFileName[2] = 
+m_strOutFileName = D:\Code\ECCC_48VBoard\ECCC_48VBoard\Debug\ECCC_48VBoard.out
+m_strOut2FileName = 
+m_strOut3FileName = 
+m_strDSPType = TMS320C28346
+m_strCommPort = SCI
+m_strDebuggingModel = dwarf
+[Parallel & RS232 Port]
+m_strProtocol = Fast
+[USB Port]
+m_uBPS = 115200
+m_uWaitMoreMicroTime = 1000
+[Miscellaneous]
+m_bVariableAutoSeek = 1
+m_bStopWhenSuccessiveFail = 0
+m_bDisplayPrintableChar = 0
+m_strEditor = 
+[Project Information]
+m_uVersion = 1040

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?ccsproject version="1.0"?>
+<projectOptions>
+	<deviceVariant value="TMS320C28XX.TMS320C28346"/>
+	<deviceFamily value="C2000"/>
+	<deviceEndianness value="little"/>
+	<codegenToolVersion value="6.1.0"/>
+	<isElfFormat value="false"/>
+	<connection value="common/targetdb/connections/SWSDS100i.xml"/>
+	<linkerCommandFile value="28346_RAM_lnk.cmd"/>
+	<rts value="libc.a"/>
+	<templateProperties value="id=com.ti.common.project.core.emptyProjectTemplate,"/>
+	<isTargetManual value="true"/>
+	<origin value="C:/Users/j10000/Documents/DSP stuff/00. Original source/New LG set code/LG_set_test_Modified/LG_Edu_2017_07_18"/>
+</projectOptions>
