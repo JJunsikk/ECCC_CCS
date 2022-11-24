@@ -12,16 +12,16 @@ interrupt void FaultInterrupt(void)
 {
 	Switch_DSP_Off();
 
-	EPwm1Regs.CMPA.half.CMPA = 0;
+	EPwm1Regs.CMPA.half.CMPA = 0;                               // compare counter 초기화
 	EPwm2Regs.CMPA.half.CMPA = 0;
 	EPwm3Regs.CMPA.half.CMPA = 0;
 
-    Flag.START_M = 0;
+    Flag.START_M = 0;                                           // 모터 정지
     INV_M.NextState = FAULT_STATE;
 
     if(SWFault == 0)    TZFault = 1;
 
-	Fault_info_M.Ia_fault = INV_M.Ia;
+	Fault_info_M.Ia_fault = INV_M.Ia;                           // fault가 발생한 순간의 데이터 수집
 	Fault_info_M.Ib_fault = INV_M.Ib;
 	Fault_info_M.Ic_fault = INV_M.Ic;
     Fault_info_M.Idse_fault = INV_M.Idsr;

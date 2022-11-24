@@ -198,7 +198,7 @@ void BootstrapCharge(void) {
     case 1:
         INV_M.INVOnOffState = INV_ON_STATE;
 
-        EPwm1Regs.CMPA.half.CMPA = 0;
+        EPwm1Regs.CMPA.half.CMPA = 0;                           // 윗 상 PWM은 0으로 유지
         EPwm2Regs.CMPA.half.CMPA = 0;
         EPwm3Regs.CMPA.half.CMPA = 0;
 
@@ -208,10 +208,10 @@ void BootstrapCharge(void) {
 
         EPwm1Regs.DBCTL.bit.OUT_MODE = DB_DISABLE;
         EPwm1Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
-        EPwm1Regs.AQCTLA.bit.CAU = AQ_CLEAR;
-        EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;
-        EPwm1Regs.AQCTLB.bit.CBU = AQ_CLEAR;
-        EPwm1Regs.AQCTLB.bit.CBD = AQ_SET;
+        EPwm1Regs.AQCTLA.bit.CAU = AQ_CLEAR;                    // 비교일치 시 LOW
+        EPwm1Regs.AQCTLA.bit.CAD = AQ_CLEAR;                    // 비교일치 시 LOW
+        EPwm1Regs.AQCTLB.bit.CBU = AQ_CLEAR;                    // 비교일치 시 LOW
+        EPwm1Regs.AQCTLB.bit.CBD = AQ_SET;                      // 비교일치 시 HIGH
 
         EPwm2Regs.DBCTL.bit.OUT_MODE = DB_DISABLE;
         EPwm2Regs.CMPCTL.bit.SHDWAMODE = CC_SHADOW;
@@ -250,26 +250,26 @@ void BootstrapCharge(void) {
 
 void Align(INV *tmpINV) {
     switch(tmpINV->AlignStep) {
-    case 0:
+    case 0:                                     // Align 동작 초기화 단계
         tmpINV->ThetarmOffset = 0.;
         tmpINV->IdsrRefAlign = 0.;
         tmpINV->WrRefAlign = 0.;
 
         tmpINV->AlignCnt = 0;
-        EQep1Regs.QCLR.bit.IEL = 1;
+        EQep1Regs.QCLR.bit.IEL = 1;             // 인터럽트 플래그 삭제
 
         tmpINV->AlignStep++;
         break;
 
-    case 1:
-        SlopeGenerator(&tmpINV->IdsrRefAlign, tmpINV->IdsrRefSetAlign, tmpINV->DelIdsrAlign);
-        if(tmpINV->IdsrRefAlign == tmpINV->IdsrRefSetAlign)   tmpINV->AlignStep++;
+    case 1:                 // Var(제어 대상)       // Cmd(제어 목표)           // DelPerTs(변화량)
+        SlopeGenerator(&tmpINV->IdsrRefAlign, tmpINV->IdsrRefSetAlign, tmpINV->DelIdsrAlign);       // tmpINV->IdsrRefSetAlign = 20.;
+        if(tmpINV->IdsrRefAlign == tmpINV->IdsrRefSetAlign)   tmpINV->AlignStep++;                  // tmpINV->DelIdsrAlign = 200. * Tsamp;
         break;
 
     case 2:
-        SlopeGenerator(&tmpINV->WrRefAlign, tmpINV->WrRefSetAlign, tmpINV->DelWrRefAlign);
-
-        //if(EQep1Regs.QFLG.bit.IEL == 1) tmpINV->AlignStep++;
+        SlopeGenerator(&tmpINV->WrRefAlign, tmpINV->WrRefSetAlign, tmpINV->DelWrRefAlign);          // tmpINV->WrRefSetAlign = (PI2 * 5.);
+                                                                                                    // tmpINV->DelWrRefAlign = (PI2 * 10.) * Tsamp;
+        //if(EQep1Regs.QFLG.bit.IEL == 1) tmpINV->AlignStep++;                                      // z펄스가 발생하면 설정되는 레지스터. 즉, z펄스가 발생하여 초기 위치를 알았으면 다음 스텝으로 진행
         break;
 
     case 3:
@@ -282,23 +282,23 @@ void Align(INV *tmpINV) {
 
     case 4:
         tmpINV->AlignCnt++;
-        if(tmpINV->AlignCnt == (tmpINV->AlignCntMax>>4)) {
+        if(tmpINV->AlignCnt == (tmpINV->AlignCntMax>>4)) {                                          // AlignCntMax : 2초에 해당하는 40,000    // 4bit shift했으므로, 2,500 count 후 다음 Align 스텝으로 넘어간다.
             tmpINV->AlignStep++;
             tmpINV->AlignCnt = 0;
         }
         break;
 
     case 5:
-        tmpINV->INV_AlignCntPlus1 = 1. / ((float)tmpINV->AlignCnt + 1.);
-        tmpINV->ThetarmOffsetTemp = (tmpINV->ThetarmOffsetTemp * (float)tmpINV->AlignCnt + tmpINV->Thetarm) * tmpINV->INV_AlignCntPlus1;
+        tmpINV->INV_AlignCntPlus1 = 1. / ((float)tmpINV->AlignCnt + 1.);                            // 분모에 1을 더해 DIV0 방지.
+        tmpINV->ThetarmOffsetTemp = (tmpINV->ThetarmOffsetTemp * (float)tmpINV->AlignCnt + tmpINV->Thetarm) * tmpINV->INV_AlignCntPlus1;    // Align 동작을 수행하는 동안, 읽어온 각도들의 평균을 계속 계산한다.
         tmpINV->AlignCnt++;
 
-        if(tmpINV->AlignCnt == tmpINV->AlignCntMax) tmpINV->AlignStep++;
+        if(tmpINV->AlignCnt == tmpINV->AlignCntMax) tmpINV->AlignStep++;                            // 40,000 count가 채워질 때까지 평균 계산 동작 수행
 
         break;
 
     default:
-        tmpINV->ThetarmOffset = tmpINV->ThetarmOffsetTemp;
+        tmpINV->ThetarmOffset = tmpINV->ThetarmOffsetTemp;                                          // 계산된 평균값 저장
         tmpINV->ThetarmOffsetTemp = 0.;
 
         tmpINV->IdsrRefAlign = 0.;
@@ -313,13 +313,13 @@ void Align(INV *tmpINV) {
     tmpINV->IqsrRef = 0.;
 
     tmpINV->Wr = tmpINV->WrRefAlign;
-    if (ABS(tmpINV->Wr) < 1e-6)     tmpINV->InvWr = SIGN(tmpINV->Wr) * 1.e6;
+    if (ABS(tmpINV->Wr) < 1e-6)     tmpINV->InvWr = SIGN(tmpINV->Wr) * 1.e6;                        // SIGN(x) : (((x)<0)? -1. : 1. )
     else                            tmpINV->InvWr = 1. / tmpINV->Wr;
 
     tmpINV->ThetarIbyF = BOUND_PI(tmpINV->ThetarIbyF + Tsamp * tmpINV->Wr);
     tmpINV->ThetarIbyFSqr = tmpINV->ThetarIbyF * tmpINV->ThetarIbyF;
-    tmpINV->CosThetar = COS(tmpINV->ThetarIbyFSqr);
-    tmpINV->SinThetar = SIN(tmpINV->ThetarIbyF, tmpINV->ThetarIbyFSqr);
+    tmpINV->CosThetar = COS(tmpINV->ThetarIbyFSqr);                                                 // COS(x) : (1.-(x2)*(f2-(x2)*(f4-(x2)*(f6-(x2)*(f8-(x2)*(f10-(x2)*(f12-(x2)*f14)))))))
+    tmpINV->SinThetar = SIN(tmpINV->ThetarIbyF, tmpINV->ThetarIbyFSqr);                             // SIN(x, x2) : ((x)*(1.-(x2)*(f3-(x2)*(f5-(x2)*(f7-(x2)*(f9-(x2)*(f11-(x2)*(f13-(x2)*f15))))))))
 
     tmpINV->ThetarCompIbyF = BOUND_PI(tmpINV->ThetarIbyF + 1.5 * Tsamp * tmpINV->Wr);
     tmpINV->ThetarCompIbyFSqr = tmpINV->ThetarCompIbyF * tmpINV->ThetarCompIbyF;
@@ -447,40 +447,40 @@ void CurrentControl(INV *tmpINV) {
 }
 
 void VoltageModulation(INV *tmpINV) {
-    tmpINV->VdssRef = tmpINV->CosThetarComp * tmpINV->VdsrRef - tmpINV->SinThetarComp * tmpINV->VqsrRef;
+    tmpINV->VdssRef = tmpINV->CosThetarComp * tmpINV->VdsrRef - tmpINV->SinThetarComp * tmpINV->VqsrRef;        // 회전좌표계 dq축 전압을 정지좌표계로 전환
     tmpINV->VqssRef = tmpINV->SinThetarComp * tmpINV->VdsrRef + tmpINV->CosThetarComp * tmpINV->VqsrRef;
 
-    tmpINV->VasRef = tmpINV->VdssRef;
+    tmpINV->VasRef = tmpINV->VdssRef;                                                                           // dq를 abc로 전환
     tmpINV->VbsRef = -0.5 * (tmpINV->VdssRef - SQRT3 * tmpINV->VqssRef);
     tmpINV->VcsRef = -0.5 * (tmpINV->VdssRef + SQRT3 * tmpINV->VqssRef);
 
-    tmpINV->VabcsRefMax = MAX(MAX(tmpINV->VasRef, tmpINV->VbsRef), tmpINV->VcsRef);
-    tmpINV->VabcsRefMin = MIN(MIN(tmpINV->VasRef, tmpINV->VbsRef), tmpINV->VcsRef);
+    tmpINV->VabcsRefMax = MAX(MAX(tmpINV->VasRef, tmpINV->VbsRef), tmpINV->VcsRef);                             // 3상 전압 중 최대치 판별
+    tmpINV->VabcsRefMin = MIN(MIN(tmpINV->VasRef, tmpINV->VbsRef), tmpINV->VcsRef);                             // 3상 전압 중 최소치 판별
 
-    tmpINV->VOffset = -0.5 * (tmpINV->VabcsRefMax + tmpINV->VabcsRefMin);
+    tmpINV->VOffset = -0.5 * (tmpINV->VabcsRefMax + tmpINV->VabcsRefMin);                                       // 최대치, 최소치를 기준으로 옵셋 전압 계산
 
-    tmpINV->VanRef = tmpINV->VasRef + tmpINV->VOffset;
+    tmpINV->VanRef = tmpINV->VasRef + tmpINV->VOffset;                                                          // 폴 전압 = 상전압 + 옵셋 전압
     tmpINV->VbnRef = tmpINV->VbsRef + tmpINV->VOffset;
     tmpINV->VcnRef = tmpINV->VcsRef + tmpINV->VOffset;
 
-    tmpINV->DutyA = LIMIT(tmpINV->VanRef * tmpINV->InvVdc + 0.5, 0., 1.);
+    tmpINV->DutyA = LIMIT(tmpINV->VanRef * tmpINV->InvVdc + 0.5, 0., 1.);                                       // 불가능한 지령에 대하여 듀티 범위 제한 동작
     tmpINV->DutyB = LIMIT(tmpINV->VbnRef * tmpINV->InvVdc + 0.5, 0., 1.);
     tmpINV->DutyC = LIMIT(tmpINV->VcnRef * tmpINV->InvVdc + 0.5, 0., 1.);
 
-    tmpINV->VanOut = (tmpINV->DutyA - 0.5) * tmpINV->Vdc;
+    tmpINV->VanOut = (tmpINV->DutyA - 0.5) * tmpINV->Vdc;                                                       // 듀티 값을 이용하여 폴 전압 결정
     tmpINV->VbnOut = (tmpINV->DutyB - 0.5) * tmpINV->Vdc;
     tmpINV->VcnOut = (tmpINV->DutyC - 0.5) * tmpINV->Vdc;
 
-    tmpINV->VdssOut = (2. * tmpINV->VanOut - tmpINV->VbnOut - tmpINV->VcnOut) * INV3;
+    tmpINV->VdssOut = (2. * tmpINV->VanOut - tmpINV->VbnOut - tmpINV->VcnOut) * INV3;                           // abc를 dq로 변환
     tmpINV->VqssOut = (tmpINV->VbnOut - tmpINV->VcnOut) * INV_SQRT3;
 
-    tmpINV->VdsrOut = tmpINV->VdssOut * tmpINV->CosThetarComp + tmpINV->VqssOut * tmpINV->SinThetarComp;
+    tmpINV->VdsrOut = tmpINV->VdssOut * tmpINV->CosThetarComp + tmpINV->VqssOut * tmpINV->SinThetarComp;        // 정지좌표계 dq축 전압을 회전좌표계로 전환
     tmpINV->VqsrOut = -tmpINV->VdssOut * tmpINV->SinThetarComp + tmpINV->VqssOut * tmpINV->CosThetarComp;
 
     tmpINV->VdqsrOutMag = sqrt(tmpINV->VdsrOut * tmpINV->VdsrOut + tmpINV->VqsrOut * tmpINV->VqsrOut);
 }
 
-void PwmUpdate(float DutyA, float DutyB, float DutyC) {
+void PwmUpdate(float DutyA, float DutyB, float DutyC) {                                                         // 듀티 오입력으로 compare값이 잘못 들어가면, 범위 내로 보정한 다음 레지스터에 기록
     CmprTemp = (int16)(maxCount_samp * DutyA);
     CmprTemp = (CmprTemp > maxCount_samp) ? maxCount_samp : ((CmprTemp < 0) ? 0 : CmprTemp);
     EPwm1Regs.CMPA.half.CMPA = CmprTemp;

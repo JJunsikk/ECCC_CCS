@@ -3,22 +3,29 @@
 Uint16 uOffsetLoopCnt = 0, uOffsetMaxCnt = (1<<14);
 Uint16 uOffset_v = 0, uCnt = 0;
 Uint16 AD0CH[6] = {0., 0., 0., 0., 0., 0.};
-float OffsetAD0[6] = { 0. , 0., 0., 0., 0., 0.};
+float OffsetAD0[6] = {0. , 0., 0., 0., 0., 0.};
 
-float ScaleAD0[6] = {
-         1. / 0.5e-3 / 93. * 5. / 4096.,              //CHA0+ : Idc
-         (3.9e3 * 3. + 1.e3) / 1.e3 * 5. / 4096.,    //CHB0+ : Vdc
-         1. / 0.5e-3 / 93. * 5. / 4096.,	          //CHA1- : IdcFilt
-         1. / 30e-3 * 5. / 4096.,                     //CHB1- : Ic
-         -1. / 30e-3 * 5. / 4096.,	                  //CHA1+ : Ia
-         1. / 30e-3 * 5. / 4096.,                     //CHB1+ : Ib
-
+float ScaleAD0[6] = /*{
+        1. / 0.5e-3 / 93. * 5. / 4096.,                 //CHA0+ : Idc
+        (3.9e3 * 3. + 1.e3) / 1.e3 * 5. / 4096.,        //CHB0+ : Vdc
+        1. / 0.5e-3 / 93. * 5. / 4096.,	                //CHA1- : IdcFilt
+        1. / 30e-3 * 5. / 4096.,                        //CHB1- : Ic
+        -1. / 30e-3 * 5. / 4096.,	                    //CHA1+ : Ia
+        1. / 30e-3 * 5. / 4096.,                        //CHB1+ : Ib
+        };*/
+    {
+        1. / 30e-3 * 5. / 4096.,                 //CHA0+ : Ic
+        (3.9e3 * 3. + 1.e3) / 1.e3 * 5. / 4096.,        //CHB0+ :
+        1. / 30e-3 * 5. / 4096.,                 //CHA1- : Ib
+        (3.9e3 * 3. + 1.e3) / 1.e3 * 5. / 4096.,        //CHB1- : Vdc/
+        -1. / 30e-3 * 5. / 4096.,                       //CHA1+ :
+        1. / 30e-3 * 5. / 4096.,                        //CHB1+ : VOT
 };
 
 void InitAdc(void)
 {
-	AD0_RD = 0x101;
-	AD0_RD = 0x03FF;
+    AD0_RD = 0x101;
+    AD0_RD = 0x03FF;
 }
 
 void ADC0_Process(void)
@@ -60,7 +67,7 @@ interrupt void OffsetInterrupt(void)
         if (uOffsetLoopCnt > 99)
         {
             uOffset_v = 1;
-            uOffsetLoopCnt = 0 ;
+            uOffsetLoopCnt = 0;
         }
     }
     else
